@@ -2,7 +2,6 @@
 
 const Router = require("express").Router;
 const router = new Router();
-// const app = require("../app");
 const User = require("../models/user");
 
 const { SECRET_KEY } = require("../config");
