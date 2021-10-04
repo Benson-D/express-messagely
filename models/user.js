@@ -26,7 +26,7 @@ class User {
   static async register({ username, password, first_name, last_name, phone }) {
     // Need to Hash password
 
-    const hashedPass = await bcrypt.hash(password, BCRYPT_WORK_FACTOR)
+    const hashedPass = await bcrypt.hash(password, BCRYPT_WORK_FACTOR);
 
     const result = await db.query(
       `INSERT INTO users (username, password, first_name, last_name, phone, join_at, last_login_at) 
@@ -44,7 +44,7 @@ class User {
     const result = await db.query(
       `SELECT password 
         FROM users 
-        WHERE username = $1, 
+        WHERE username = $1
       `,
       [username]
     );
@@ -52,8 +52,8 @@ class User {
     let user = result.rows[0];
 
     if (user) {
-      return (await bcrypt.compare(password, user.password === true));
-    };
+      return (await bcrypt.compare(password, user.password)) === true;
+    }
 
     return false;
   }
@@ -66,7 +66,8 @@ class User {
       SET last_login_at = current_timestamp
       WHERE username = $1
       RETURNING username, last_login_at
-      `, [username]
+      `,
+      [username]
     );
     const user = result.rows[0];
 
@@ -103,7 +104,8 @@ class User {
       `SELECT username,first_name,last_name, phone, join_at, last_login_at
         FROM users
         WHERE username = $1
-      `, [username]
+      `,
+      [username]
     );
 
     const user = result.rows[0];
@@ -121,16 +123,36 @@ class User {
 
   static async messagesFrom(username) {
     const result = await db.query(
-      `SELECT id, from_username, body, sent_at, read_at
+      `SELECT m.id AS message_id, 
+          m.to_username AS to_username, 
+          m.body AS body, 
+          m.sent_at AS sent_at, 
+          m.read_at AS read_at,
+          u.username AS username,
+          u.first_name AS to_first,
+          u.last_name AS to_last,
+          u.phone AS to_phone
         FROM messages as m
         JOIN users as u
-          ON m.from_username = u.username
+          ON m.to_username = u.username
         WHERE m.from_username = $1
-      `, [username]
+      `,
+      [username]
     );
     let messages = result.rows;
 
-    return messages;
+    return messages.map((m) => ({
+      id: m.message_id,
+      to_user: {
+        username: m.to_username,
+        first_name: m.to_first,
+        last_name: m.to_last,
+        phone: m.to_phone,
+      },
+      body: m.body,
+      sent_at: m.sent_at,
+      read_at: m.read_at,
+    }));
   }
 
   /** Return messages to this user.
@@ -139,8 +161,8 @@ class User {
    *
    * where from_user is
    *   {id, first_name, last_name, phone}
-   * 
-   * 
+   *
+   *
    */
 
   static async messagesTo(username) {
@@ -150,6 +172,7 @@ class User {
               m.body AS body, 
               m.sent_at AS sent_at, 
               m.read_at AS read_at,
+              u.username,
               u.first_name AS from_first,
               u.last_name AS from_last,
               u.phone AS from_phone
@@ -157,20 +180,23 @@ class User {
         JOIN users as u
           ON m.from_username = u.username
         WHERE m.to_username = $1
-      `, [username]
+      `,
+      [username]
     );
     let messages = result.rows;
 
-    let returnValues = messages.map(m => ({
-      id: message.id, from_user: {
-        id: m.from_username,
+    return messages.map((m) => ({
+      id: m.message_id,
+      from_user: {
+        username: m.from_username,
         first_name: m.from_first,
         last_name: m.from_last,
-        phone: m.from_phone
+        phone: m.from_phone,
       },
-      body: m.body, sent_at: m.sent_at, read_at: m.read_at
+      body: m.body,
+      sent_at: m.sent_at,
+      read_at: m.read_at,
     }));
-    return returnValues;
   }
 }
 
