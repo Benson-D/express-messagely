@@ -5,7 +5,7 @@ const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const db = require("../db");
 
-const { UnauthorizedError } = require("../expressError");
+const { UnauthorizedError, NotFoundError } = require("../expressError");
 
 /** User of the site. */
 
@@ -25,11 +25,14 @@ class User {
 
   static async register({ username, password, first_name, last_name, phone }) {
     // Need to Hash password
+
+    const hashedPass = await bcrypt.hash(password, BCRYPT_WORK_FACTOR)
+
     const result = await db.query(
       `INSERT INTO users (username, password, first_name, last_name, phone, join_at, last_login_at) 
-            VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            VALUES ($1, $2, $3, $4, $5, current_timestamp, current_timestamp)
             RETURNING username, password, first_name, last_name, phone`,
-      [username, password, first_name, last_name, phone]
+      [username, hashedPass, first_name, last_name, phone]
       // NOTE: could lead to a bug
     );
     return result.rows[0];
@@ -40,8 +43,8 @@ class User {
   static async authenticate(username, password) {
     const result = await db.query(
       `SELECT password 
-      FROM users 
-      WHERE username = $1, 
+        FROM users 
+        WHERE username = $1, 
       `,
       [username]
     );
@@ -49,25 +52,42 @@ class User {
     let user = result.rows[0];
 
     if (user) {
-      if ((await bcrypt.compare(password, user.password)) === true) {
-        let token = jwt.sign({ username, SECRET_KEY });
-        // NOTE: think of assigning tolken to user
-        return true;
-      }
-    }
+      return (await bcrypt.compare(password, user.password === true));
+    };
 
-    throw new UnauthorizedError("Invalid User");
-    // let current users
+    return false;
   }
 
   /** Update last_login_at for user */
 
-  static async updateLoginTimestamp(username) {}
+  static async updateLoginTimestamp(username) {
+    const result = await db.query(
+      `UPDATE users
+      SET last_login_at = current_timestamp
+      WHERE username = $1
+      RETURNING username, last_login_at
+      `, [username]
+    );
+    const user = result.rows[0];
+
+    if (!user) throw new NotFoundError();
+
+    return user;
+  }
 
   /** All: basic info on all users:
    * [{username, first_name, last_name}, ...] */
 
-  static async all() {}
+  static async all() {
+    const result = await db.query(
+      `SELECT username,first_name,last_name 
+        FROM users
+      `
+    );
+    const allUsers = result.rows;
+
+    return allUsers;
+  }
 
   /** Get: get user by username
    *
@@ -78,7 +98,18 @@ class User {
    *          join_at,
    *          last_login_at } */
 
-  static async get(username) {}
+  static async get(username) {
+    const result = await db.query(
+      `SELECT username,first_name,last_name, phone, join_at, last_login_at
+        FROM users
+        WHERE username = $1
+      `, [username]
+    );
+
+    const user = result.rows[0];
+
+    return user;
+  }
 
   /** Return messages from this user.
    *
@@ -88,7 +119,19 @@ class User {
    *   {username, first_name, last_name, phone}
    */
 
-  static async messagesFrom(username) {}
+  static async messagesFrom(username) {
+    const result = await db.query(
+      `SELECT id, from_username, body, sent_at, read_at
+        FROM messages as m
+        JOIN users as u
+          ON m.from_username = u.username
+        WHERE m.from_username = $1
+      `, [username]
+    );
+    let messages = result.rows;
+
+    return messages;
+  }
 
   /** Return messages to this user.
    *
@@ -96,9 +139,39 @@ class User {
    *
    * where from_user is
    *   {id, first_name, last_name, phone}
+   * 
+   * 
    */
 
-  static async messagesTo(username) {}
+  static async messagesTo(username) {
+    const result = await db.query(
+      `SELECT m.id AS message_id, 
+              m.from_username AS from_username, 
+              m.body AS body, 
+              m.sent_at AS sent_at, 
+              m.read_at AS read_at,
+              u.first_name AS from_first,
+              u.last_name AS from_last,
+              u.phone AS from_phone
+        FROM messages as m
+        JOIN users as u
+          ON m.from_username = u.username
+        WHERE m.to_username = $1
+      `, [username]
+    );
+    let messages = result.rows;
+
+    let returnValues = messages.map(m => ({
+      id: message.id, from_user: {
+        id: m.from_username,
+        first_name: m.from_first,
+        last_name: m.from_last,
+        phone: m.from_phone
+      },
+      body: m.body, sent_at: m.sent_at, read_at: m.read_at
+    }));
+    return returnValues;
+  }
 }
 
 module.exports = User;
