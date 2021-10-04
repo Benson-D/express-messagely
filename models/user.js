@@ -1,7 +1,6 @@
 "use strict";
 
-const { DB_URI, SECRET_KEY, BCRYPT_WORK_FACTOR } = require("../config");
-const jwt = require("jsonwebtoken");
+const { BCRYPT_WORK_FACTOR } = require("../config");
 const bcrypt = require("bcrypt");
 const db = require("../db");
 
