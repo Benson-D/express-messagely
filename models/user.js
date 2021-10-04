@@ -2,6 +2,8 @@
 
 const { DB_URI, SECRET_KEY, BCRYPT_WORK_FACTOR } = require("../config");
 const jwt = require("jsonwebtoken");
+const bcrypt = require("bcrypt");
+const db = require("../db");
 
 const { UnauthorizedError } = require("../expressError");
 
@@ -22,20 +24,21 @@ class User {
    */
 
   static async register({ username, password, first_name, last_name, phone }) {
-    const results = await db.query(
+    // Need to Hash password
+    const result = await db.query(
       `INSERT INTO users (username, password, first_name, last_name, phone, join_at, last_login_at) 
             VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
-            RETURNING id`,
+            RETURNING username, password, first_name, last_name, phone`,
       [username, password, first_name, last_name, phone]
       // NOTE: could lead to a bug
     );
-    return { username, password, first_name, last_name, phone };
+    return result.rows[0];
   }
 
   /** Authenticate: is username/password valid? Returns boolean. */
 
   static async authenticate(username, password) {
-    const results = await db.query(
+    const result = await db.query(
       `SELECT password 
       FROM users 
       WHERE username = $1, 
@@ -43,7 +46,7 @@ class User {
       [username]
     );
 
-    let user = results.rows[0];
+    let user = result.rows[0];
 
     if (user) {
       if ((await bcrypt.compare(password, user.password)) === true) {
