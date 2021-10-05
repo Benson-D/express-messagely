@@ -9,15 +9,6 @@ const { UnauthorizedError, NotFoundError } = require("../expressError");
 /** User of the site. */
 
 class User {
-  // NOTE: stored in objects may need to revisit
-  constructor({ username, password, first_name, last_name, phone }) {
-    this.username = username;
-    this.password = password;
-    this.first_name = first_name;
-    this.last_name = last_name;
-    this.phone = phone;
-  }
-
   /** Register new user. Returns
    *    {username, password, first_name, last_name, phone}
    */
@@ -27,12 +18,12 @@ class User {
 
     const hashedPass = await bcrypt.hash(password, BCRYPT_WORK_FACTOR);
 
+    // Easier readability on query format
     const result = await db.query(
       `INSERT INTO users (username, password, first_name, last_name, phone, join_at, last_login_at) 
             VALUES ($1, $2, $3, $4, $5, current_timestamp, current_timestamp)
             RETURNING username, password, first_name, last_name, phone`,
       [username, hashedPass, first_name, last_name, phone]
-      // NOTE: could lead to a bug
     );
     return result.rows[0];
   }
@@ -70,9 +61,9 @@ class User {
     );
     const user = result.rows[0];
 
-    if (!user) throw new NotFoundError();
+    if (!user) throw new NotFoundError("Invalid username");
 
-    return user;
+    // Don't need to return the user, just updating the timestamp
   }
 
   /** All: basic info on all users:
@@ -84,9 +75,8 @@ class User {
         FROM users
       `
     );
-    const allUsers = result.rows;
-
-    return allUsers;
+    // ORDER BY username, more readable
+    return result.rows;
   }
 
   /** Get: get user by username
@@ -107,9 +97,8 @@ class User {
       [username]
     );
 
-    const user = result.rows[0];
-
-    return user;
+    // Throw error if not found
+    return result.rows[0];
   }
 
   /** Return messages from this user.

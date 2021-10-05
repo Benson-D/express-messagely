@@ -15,6 +15,7 @@ router.post("/login", async function (req, res, next) {
   const { username, password } = req.body;
   if (await User.authenticate(username, password)) {
     let token = jwt.sign({ username }, SECRET_KEY);
+    // login timestamp
     return res.json({ token });
   }
 
@@ -36,6 +37,8 @@ router.post("/register", async function (req, res, next) {
   } catch (err) {
     throw new BadRequestError("Unable to register user");
   }
+
+  //
 });
 
 module.exports = router;
