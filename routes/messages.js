@@ -35,6 +35,7 @@ router.get("/:id", ensureCorrectMessageAccess, async function (req, res, next) {
  * {to_username, body} =>
  *   {message: {id, from_username, to_username, body, sent_at}}
  *
+ * makes sure user is logged in
  **/
 
 router.post("/", ensureLoggedIn, async function (req, res, next) {
@@ -50,7 +51,7 @@ router.post("/", ensureLoggedIn, async function (req, res, next) {
  *  => {message: {id, read_at}}
  *
  * Makes sure that the only the intended recipient can mark as read.
- *
+ * 
  **/
 
 router.post("/:id", ensureRecipientAccess, async function (req, res, next) {

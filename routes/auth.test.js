@@ -6,6 +6,7 @@ const jwt = require("jsonwebtoken");
 const app = require("../app");
 const db = require("../db");
 const User = require("../models/user");
+const { authenticate } = require("../models/user");
 
 describe("Auth Routes Test", function () {
   beforeEach(async function () {
@@ -19,6 +20,7 @@ describe("Auth Routes Test", function () {
       last_name: "Testy1",
       phone: "+14155550000",
     });
+
   });
 
   /** POST /auth/register => token  */

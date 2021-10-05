@@ -3,22 +3,27 @@
 const Router = require("express").Router;
 const router = new Router();
 
+const User = require("../models/user");
+
 const {ensureLoggedIn, ensureCorrectUser} = require("../middleware/auth.js")
 /** GET / - get list of users.
  *
  * => {users: [{username, first_name, last_name, phone}, ...]}
  *
+ * throw error if user not logged in
  **/
 
 router.get("/", ensureLoggedIn, async function (req, res, next) {
+    console.log('got to beginning of users route')
     let users = await User.all();
+    console.log("users in route", users);
     return res.json({users});
 });
 
 /** GET /:username - get detail of users.
  *
  * => {user: {username, first_name, last_name, phone, join_at, last_login_at}}
- *
+ * throw error if user not correct user in
  **/
 
  router.get("/:username", ensureCorrectUser, async function (req, res, next) {

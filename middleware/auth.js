@@ -1,6 +1,6 @@
 "use strict";
 
-/** Middleware for handling req authorization for routes. */
+/** Middleware for handling req authorization for routes. throws unauthorized error if not */
 
 const jwt = require("jsonwebtoken");
 
@@ -22,7 +22,7 @@ function authenticateJWT(req, res, next) {
   }
 }
 
-/** Middleware: Requires user is authenticated. */
+/** Middleware: Requires user is authenticated.throws unauthorized error if not  */
 
 function ensureLoggedIn(req, res, next) {
   try {
@@ -36,7 +36,7 @@ function ensureLoggedIn(req, res, next) {
   }
 }
 
-/** Middleware: Requires user is user for route. */
+/** Middleware: Requires user is user for route. throws unauthorized error if not */
 
 function ensureCorrectUser(req, res, next) {
   try {
@@ -49,6 +49,9 @@ function ensureCorrectUser(req, res, next) {
     return next(err);
   }
 }
+
+
+/** Middleware: Requires user is either from or to party.throws unauthorized error if not  */
 
 function ensureCorrectMessageAccess(req, res, next) {
   const message = Message.get(req.params.id);
@@ -65,6 +68,8 @@ function ensureCorrectMessageAccess(req, res, next) {
     return next(err);
   }
 }
+
+/** Middleware: Requires user is 'to' party. throws unauthorized error if not */
 
 function ensureRecipientAccess(req, res, next) {
   const message = Message.get(req.params.id);
@@ -83,4 +88,6 @@ module.exports = {
   authenticateJWT,
   ensureLoggedIn,
   ensureCorrectUser,
+  ensureCorrectMessageAccess,
+  ensureRecipientAccess
 };
