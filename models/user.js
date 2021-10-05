@@ -98,7 +98,11 @@ class User {
     );
 
     // Throw error if not found
-    return result.rows[0];
+
+    let user = result.rows[0];
+
+    if (!user) throw new NotFoundError("username not found");
+    return user;
   }
 
   /** Return messages from this user.
